@@ -19,6 +19,10 @@ function Panel() {
   const [pickerResult, setPickerResult] = useState<{ url: string; type: string } | null>(null);
   const [requestCookies, setRequestCookies] = useState<string | null>(null);
   const [responseCookies, setResponseCookies] = useState<string[]>([]);
+  const [responseSearch, setResponseSearch] = useState('');
+  const [searchResults, setSearchResults] = useState<Set<string>>(new Set());
+  const [isSearching, setIsSearching] = useState(false);
+  const [responseCache, setResponseCache] = useState<Map<string, string>>(new Map());
 
   useEffect(() => {
     // Listen for network requests via DevTools API
@@ -59,6 +63,15 @@ function Panel() {
         // Store HAR request for content fetching
         harRequestMap.set(request.id, harRequest);
         setRequests(prev => [...prev, request]);
+        
+        // Pre-fetch response body for search (for API calls)
+        if (request.type === 'xmlhttprequest' || request.mimeType?.includes('json')) {
+          harRequest.getContent((content) => {
+            if (content) {
+              setResponseCache(prev => new Map(prev).set(request.id, content));
+            }
+          });
+        }
       });
     };
 
@@ -69,6 +82,9 @@ function Panel() {
       setRequests([]);
       setSelectedRequest(null);
       setResponseBody(null);
+      setResponseCache(new Map());
+      setSearchResults(new Set());
+      setResponseSearch('');
       harRequestMap.clear();
     };
     chrome.devtools.network.onNavigated.addListener(handleNavigated);
@@ -191,8 +207,66 @@ function Panel() {
     setPickerResult(null);
     setRequestCookies(null);
     setResponseCookies([]);
+    setResponseCache(new Map());
+    setSearchResults(new Set());
+    setResponseSearch('');
     harRequestMap.clear();
   };
+
+  // Search through response bodies
+  const searchResponses = useCallback(async (searchTerm: string) => {
+    if (!searchTerm.trim()) {
+      setSearchResults(new Set());
+      return;
+    }
+
+    setIsSearching(true);
+    const matches = new Set<string>();
+    const searchLower = searchTerm.toLowerCase();
+
+    // Search through cached responses first
+    responseCache.forEach((content, requestId) => {
+      if (content.toLowerCase().includes(searchLower)) {
+        matches.add(requestId);
+      }
+    });
+
+    // Fetch and search remaining responses
+    const uncachedRequests = requests.filter(r => !responseCache.has(r.id));
+    
+    await Promise.all(
+      uncachedRequests.map(request => {
+        return new Promise<void>((resolve) => {
+          const harRequest = harRequestMap.get(request.id);
+          if (!harRequest) {
+            resolve();
+            return;
+          }
+
+          harRequest.getContent((content) => {
+            if (content) {
+              setResponseCache(prev => new Map(prev).set(request.id, content));
+              if (content.toLowerCase().includes(searchLower)) {
+                matches.add(request.id);
+              }
+            }
+            resolve();
+          });
+        });
+      })
+    );
+
+    setSearchResults(matches);
+    setIsSearching(false);
+  }, [requests, responseCache]);
+
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      searchResponses(responseSearch);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [responseSearch, searchResponses]);
 
   // Start element picker
   const startPicker = useCallback(() => {
@@ -242,11 +316,34 @@ function Panel() {
         
         <input
           type="text"
-          placeholder="Filter by URL or domain..."
+          placeholder="Filter by URL..."
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
           className="flex-1 px-3 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
+        
+        <div className="relative">
+          <input
+            type="text"
+            placeholder="🔍 Search responses..."
+            value={responseSearch}
+            onChange={(e) => setResponseSearch(e.target.value)}
+            className={`w-48 px-3 py-1 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+              searchResults.size > 0 ? 'border-purple-400 bg-purple-50' : 'border-gray-300'
+            }`}
+          />
+          {isSearching && (
+            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">
+              ⏳
+            </span>
+          )}
+        </div>
+        
+        {searchResults.size > 0 && (
+          <span className="px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded">
+            Found in {searchResults.size} {searchResults.size === 1 ? 'response' : 'responses'}
+          </span>
+        )}
         
         <select
           value={typeFilter}
@@ -307,7 +404,7 @@ function Panel() {
               onClick={() => handleSelectRequest(request)}
               className={`grid grid-cols-12 gap-2 px-3 py-2 text-xs request-row ${
                 selectedRequest?.id === request.id ? 'selected' : ''
-              } ${request.isTracker ? 'tracker' : request.isThirdParty ? 'third-party' : ''}`}
+              } ${searchResults.has(request.id) ? 'search-match' : ''} ${request.isTracker ? 'tracker' : request.isThirdParty ? 'third-party' : ''}`}
             >
               <div className="col-span-5 truncate" title={request.url}>
                 <span className="font-medium text-gray-600">{request.method}</span>{' '}
