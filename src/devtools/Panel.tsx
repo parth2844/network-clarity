@@ -3,6 +3,7 @@ import { NetworkRequest } from '../shared/types';
 import { truncateUrl, formatDuration, formatBytes } from '../shared/utils';
 import { getStatusExplanation, getTypeExplanation } from '../shared/explanations';
 import JsonViewer, { tryParseJson } from '../components/JsonViewer';
+import CookieInspector from '../components/CookieInspector';
 
 // Store HAR request objects to fetch content later
 const harRequestMap = new Map<string, chrome.devtools.network.Request>();
@@ -16,6 +17,8 @@ function Panel() {
   const [loadingBody, setLoadingBody] = useState(false);
   const [pickerActive, setPickerActive] = useState(false);
   const [pickerResult, setPickerResult] = useState<{ url: string; type: string } | null>(null);
+  const [requestCookies, setRequestCookies] = useState<string | null>(null);
+  const [responseCookies, setResponseCookies] = useState<string[]>([]);
 
   useEffect(() => {
     // Listen for network requests via DevTools API
@@ -142,14 +145,29 @@ function Panel() {
     return matchesSearch && matchesType;
   });
 
-  // Fetch response body when request is selected
-  const fetchResponseBody = useCallback((request: NetworkRequest) => {
+  // Fetch response body and cookies when request is selected
+  const fetchRequestDetails = useCallback((request: NetworkRequest) => {
     const harRequest = harRequestMap.get(request.id);
     if (!harRequest) {
       setResponseBody(null);
+      setRequestCookies(null);
+      setResponseCookies([]);
       return;
     }
 
+    // Get cookies from headers
+    const cookieHeader = harRequest.request.headers.find(
+      h => h.name.toLowerCase() === 'cookie'
+    );
+    setRequestCookies(cookieHeader?.value || null);
+
+    // Get Set-Cookie headers from response
+    const setCookieHeaders = harRequest.response.headers
+      .filter(h => h.name.toLowerCase() === 'set-cookie')
+      .map(h => h.value);
+    setResponseCookies(setCookieHeaders);
+
+    // Fetch body
     setLoadingBody(true);
     harRequest.getContent((content, _encoding) => {
       setResponseBody(content || null);
@@ -161,14 +179,18 @@ function Panel() {
   const handleSelectRequest = useCallback((request: NetworkRequest) => {
     setSelectedRequest(request);
     setResponseBody(null);
-    fetchResponseBody(request);
-  }, [fetchResponseBody]);
+    setRequestCookies(null);
+    setResponseCookies([]);
+    fetchRequestDetails(request);
+  }, [fetchRequestDetails]);
 
   const clearRequests = () => {
     setRequests([]);
     setSelectedRequest(null);
     setResponseBody(null);
     setPickerResult(null);
+    setRequestCookies(null);
+    setResponseCookies([]);
     harRequestMap.clear();
   };
 
@@ -416,6 +438,15 @@ function Panel() {
                   <div className="text-sm">{selectedRequest.mimeType}</div>
                 </div>
               )}
+
+              {/* Cookies */}
+              <div className="mt-6 border-t pt-4">
+                <label className="text-xs text-gray-500 font-semibold mb-2 block">🍪 Cookies</label>
+                <CookieInspector 
+                  requestCookies={requestCookies}
+                  responseCookies={responseCookies}
+                />
+              </div>
 
               {/* Response Body */}
               <div className="mt-6 border-t pt-4">
