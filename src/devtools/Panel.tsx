@@ -14,6 +14,8 @@ function Panel() {
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [responseBody, setResponseBody] = useState<string | null>(null);
   const [loadingBody, setLoadingBody] = useState(false);
+  const [pickerActive, setPickerActive] = useState(false);
+  const [pickerResult, setPickerResult] = useState<{ url: string; type: string } | null>(null);
 
   useEffect(() => {
     // Listen for network requests via DevTools API
@@ -91,9 +93,41 @@ function Panel() {
       setRequests(existingRequests);
     });
 
+    // Listen for picker results
+    const handleMessage = (message: { type: string; resourceUrl?: string; elementType?: string }) => {
+      if (message.type === 'PICKER_RESULT' && message.resourceUrl) {
+        setPickerActive(false);
+        setPickerResult({ url: message.resourceUrl, type: message.elementType || 'unknown' });
+        
+        // Find matching request and select it
+        setRequests(currentRequests => {
+          const match = currentRequests.find(r => r.url === message.resourceUrl);
+          if (match) {
+            setSelectedRequest(match);
+            setResponseBody(null);
+            const harRequest = harRequestMap.get(match.id);
+            if (harRequest) {
+              harRequest.getContent((content) => {
+                setResponseBody(content || null);
+              });
+            }
+          }
+          return currentRequests;
+        });
+        
+        // Also set filter to show the URL
+        setFilter(message.resourceUrl);
+      } else if (message.type === 'PICKER_STOPPED') {
+        setPickerActive(false);
+      }
+    };
+    
+    chrome.runtime.onMessage.addListener(handleMessage);
+
     return () => {
       chrome.devtools.network.onRequestFinished.removeListener(handleRequest);
       chrome.devtools.network.onNavigated.removeListener(handleNavigated);
+      chrome.runtime.onMessage.removeListener(handleMessage);
     };
   }, []);
 
@@ -134,13 +168,49 @@ function Panel() {
     setRequests([]);
     setSelectedRequest(null);
     setResponseBody(null);
+    setPickerResult(null);
     harRequestMap.clear();
   };
+
+  // Start element picker
+  const startPicker = useCallback(() => {
+    const tabId = chrome.devtools.inspectedWindow.tabId;
+    setPickerActive(true);
+    setPickerResult(null);
+    
+    chrome.tabs.sendMessage(tabId, { type: 'PICKER_START' }, () => {
+      if (chrome.runtime.lastError) {
+        // Content script might not be loaded yet, inject it
+        console.log('Picker not ready, may need page refresh');
+        setPickerActive(false);
+      }
+    });
+  }, []);
+
+  // Stop element picker
+  const stopPicker = useCallback(() => {
+    const tabId = chrome.devtools.inspectedWindow.tabId;
+    chrome.tabs.sendMessage(tabId, { type: 'PICKER_STOP' });
+    setPickerActive(false);
+  }, []);
 
   return (
     <div className="h-screen flex flex-col">
       {/* Toolbar */}
       <div className="flex items-center gap-2 p-2 border-b border-gray-200 bg-gray-50">
+        <button
+          onClick={pickerActive ? stopPicker : startPicker}
+          className={`px-3 py-1 text-sm border rounded flex items-center gap-1 ${
+            pickerActive 
+              ? 'bg-blue-500 text-white border-blue-600 hover:bg-blue-600' 
+              : 'bg-white border-gray-300 hover:bg-gray-100'
+          }`}
+          title="Click an element on the page to find its network request"
+        >
+          <span>🎯</span>
+          {pickerActive ? 'Picking...' : 'Pick Element'}
+        </button>
+        
         <button
           onClick={clearRequests}
           className="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-100"
@@ -174,7 +244,26 @@ function Panel() {
         <div className="text-sm text-gray-500">
           {filteredRequests.length} requests
         </div>
+        
+        {pickerResult && (
+          <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
+            Found: {pickerResult.type}
+          </div>
+        )}
       </div>
+      
+      {/* Picker active banner */}
+      {pickerActive && (
+        <div className="bg-blue-500 text-white text-sm px-4 py-2 flex items-center justify-between">
+          <span>🎯 Click on any element on the page to find its network request. Press Escape to cancel.</span>
+          <button 
+            onClick={stopPicker}
+            className="px-2 py-1 bg-blue-600 rounded hover:bg-blue-700"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
 
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">

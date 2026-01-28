@@ -10,7 +10,8 @@ const manifest: ManifestV3Export = {
   permissions: [
     'webRequest',
     'activeTab',
-    'tabs'
+    'tabs',
+    'scripting'
   ],
   host_permissions: ['<all_urls>'],
   background: {
@@ -20,7 +21,14 @@ const manifest: ManifestV3Export = {
   action: {
     default_popup: 'src/popup/index.html'
   },
-  devtools_page: 'src/devtools/devtools.html'
+  devtools_page: 'src/devtools/devtools.html',
+  content_scripts: [
+    {
+      matches: ['<all_urls>'],
+      js: ['src/content/element-picker.ts'],
+      run_at: 'document_idle'
+    }
+  ]
 }
 
 export default defineConfig({
