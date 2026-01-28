@@ -1,13 +1,19 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { NetworkRequest } from '../shared/types';
 import { truncateUrl, formatDuration, formatBytes } from '../shared/utils';
 import { getStatusExplanation, getTypeExplanation } from '../shared/explanations';
+import JsonViewer, { tryParseJson } from '../components/JsonViewer';
+
+// Store HAR request objects to fetch content later
+const harRequestMap = new Map<string, chrome.devtools.network.Request>();
 
 function Panel() {
   const [requests, setRequests] = useState<NetworkRequest[]>([]);
   const [selectedRequest, setSelectedRequest] = useState<NetworkRequest | null>(null);
   const [filter, setFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [responseBody, setResponseBody] = useState<string | null>(null);
+  const [loadingBody, setLoadingBody] = useState(false);
 
   useEffect(() => {
     // Listen for network requests via DevTools API
@@ -45,6 +51,8 @@ function Panel() {
           request.isTracker = trackerDomains.some(t => requestDomain.includes(t));
         }
         
+        // Store HAR request for content fetching
+        harRequestMap.set(request.id, harRequest);
         setRequests(prev => [...prev, request]);
       });
     };
@@ -55,6 +63,8 @@ function Panel() {
     const handleNavigated = () => {
       setRequests([]);
       setSelectedRequest(null);
+      setResponseBody(null);
+      harRequestMap.clear();
     };
     chrome.devtools.network.onNavigated.addListener(handleNavigated);
 
@@ -98,9 +108,33 @@ function Panel() {
     return matchesSearch && matchesType;
   });
 
+  // Fetch response body when request is selected
+  const fetchResponseBody = useCallback((request: NetworkRequest) => {
+    const harRequest = harRequestMap.get(request.id);
+    if (!harRequest) {
+      setResponseBody(null);
+      return;
+    }
+
+    setLoadingBody(true);
+    harRequest.getContent((content, _encoding) => {
+      setResponseBody(content || null);
+      setLoadingBody(false);
+    });
+  }, []);
+
+  // Handle request selection
+  const handleSelectRequest = useCallback((request: NetworkRequest) => {
+    setSelectedRequest(request);
+    setResponseBody(null);
+    fetchResponseBody(request);
+  }, [fetchResponseBody]);
+
   const clearRequests = () => {
     setRequests([]);
     setSelectedRequest(null);
+    setResponseBody(null);
+    harRequestMap.clear();
   };
 
   return (
@@ -159,7 +193,7 @@ function Panel() {
           {filteredRequests.map((request) => (
             <div
               key={request.id}
-              onClick={() => setSelectedRequest(request)}
+              onClick={() => handleSelectRequest(request)}
               className={`grid grid-cols-12 gap-2 px-3 py-2 text-xs request-row ${
                 selectedRequest?.id === request.id ? 'selected' : ''
               } ${request.isTracker ? 'tracker' : request.isThirdParty ? 'third-party' : ''}`}
@@ -293,6 +327,36 @@ function Panel() {
                   <div className="text-sm">{selectedRequest.mimeType}</div>
                 </div>
               )}
+
+              {/* Response Body */}
+              <div className="mt-6 border-t pt-4">
+                <label className="text-xs text-gray-500 font-semibold">Response Body</label>
+                {loadingBody ? (
+                  <div className="text-sm text-gray-400 mt-2">Loading...</div>
+                ) : responseBody ? (
+                  <div className="mt-2 bg-gray-50 rounded p-2 max-h-96 overflow-auto">
+                    {(() => {
+                      // Try to parse as JSON
+                      const jsonResult = tryParseJson(responseBody);
+                      if (jsonResult.success) {
+                        return <JsonViewer data={jsonResult.data} />;
+                      }
+                      // Show as plain text
+                      return (
+                        <pre className="text-xs whitespace-pre-wrap break-all">
+                          {responseBody.length > 5000 
+                            ? responseBody.substring(0, 5000) + '\n\n... (truncated)'
+                            : responseBody}
+                        </pre>
+                      );
+                    })()}
+                  </div>
+                ) : (
+                  <div className="text-sm text-gray-400 mt-2">
+                    No response body available
+                  </div>
+                )}
+              </div>
             </div>
           ) : (
             <div className="flex items-center justify-center h-full text-gray-500">
