@@ -12,6 +12,12 @@ Click on any element on a webpage and instantly find which network request loade
 - Click to highlight the corresponding request
 - Works with images, scripts, stylesheets, iframes, and background images
 
+### 🔍 Search Responses
+Find which API request returned specific data you see on the page.
+- Type any text (e.g., a username, product name, or ID)
+- All responses containing that text are highlighted in purple
+- Perfect for answering "where did this data come from?"
+
 ### 🍪 Cookie Inspector
 Understand what cookies websites are using and why.
 - **30+ recognized cookies** (Google Analytics, Facebook Pixel, etc.)
