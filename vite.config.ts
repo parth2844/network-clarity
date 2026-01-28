@@ -38,5 +38,10 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: true,
+    rollupOptions: {
+      input: {
+        panel: 'src/devtools/panel.html',
+      },
+    },
   },
 })

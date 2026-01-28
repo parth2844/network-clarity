@@ -50,6 +50,13 @@ function Panel() {
 
     chrome.devtools.network.onRequestFinished.addListener(handleRequest);
 
+    // Clear requests when page navigates (refresh or new URL)
+    const handleNavigated = () => {
+      setRequests([]);
+      setSelectedRequest(null);
+    };
+    chrome.devtools.network.onNavigated.addListener(handleNavigated);
+
     // Get existing requests
     chrome.devtools.network.getHAR((harLog) => {
       const existingRequests: NetworkRequest[] = harLog.entries.map((entry, index) => ({
@@ -75,6 +82,7 @@ function Panel() {
 
     return () => {
       chrome.devtools.network.onRequestFinished.removeListener(handleRequest);
+      chrome.devtools.network.onNavigated.removeListener(handleNavigated);
     };
   }, []);
 
