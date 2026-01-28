@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { NetworkRequest } from '../shared/types';
-import { truncateUrl, getRequestTypeName, formatDuration, formatBytes } from '../shared/utils';
+import { truncateUrl, formatDuration, formatBytes } from '../shared/utils';
+import { getStatusExplanation, getTypeExplanation } from '../shared/explanations';
 
 function Panel() {
   const [requests, setRequests] = useState<NetworkRequest[]>([]);
@@ -167,8 +168,8 @@ function Panel() {
                 <span className="font-medium text-gray-600">{request.method}</span>{' '}
                 {truncateUrl(request.url, 40)}
               </div>
-              <div className="col-span-2 text-gray-500">
-                {getRequestTypeName(request.type)}
+              <div className="col-span-2 text-gray-500" title={getTypeExplanation(request.type).description}>
+                {getTypeExplanation(request.type).icon} {getTypeExplanation(request.type).name}
               </div>
               <div className={`col-span-2 ${
                 request.status >= 400 ? 'text-red-600' : 
@@ -214,15 +215,33 @@ function Panel() {
                 </div>
                 <div>
                   <label className="text-xs text-gray-500">Status</label>
-                  <div className={`text-sm font-medium ${
-                    selectedRequest.status >= 400 ? 'text-red-600' : 'text-green-600'
-                  }`}>
-                    {selectedRequest.status} {selectedRequest.statusText}
-                  </div>
+                  {(() => {
+                    const statusInfo = getStatusExplanation(selectedRequest.status);
+                    return (
+                      <div>
+                        <div className={`text-sm font-medium ${
+                          statusInfo.isError ? 'text-red-600' : statusInfo.isWarning ? 'text-yellow-600' : 'text-green-600'
+                        }`}>
+                          {selectedRequest.status} - {statusInfo.summary}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          {statusInfo.detail}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
                 <div>
                   <label className="text-xs text-gray-500">Type</label>
-                  <div className="text-sm">{getRequestTypeName(selectedRequest.type)}</div>
+                  {(() => {
+                    const typeInfo = getTypeExplanation(selectedRequest.type);
+                    return (
+                      <div>
+                        <div className="text-sm">{typeInfo.icon} {typeInfo.name}</div>
+                        <div className="text-xs text-gray-500 mt-1">{typeInfo.description}</div>
+                      </div>
+                    );
+                  })()}
                 </div>
                 <div>
                   <label className="text-xs text-gray-500">Domain</label>
