@@ -17,6 +17,8 @@ function Panel() {
   const [loadingBody, setLoadingBody] = useState(false);
   const [requestCookies, setRequestCookies] = useState<string | null>(null);
   const [responseCookies, setResponseCookies] = useState<string[]>([]);
+  const [requestBody, setRequestBody] = useState<string | null>(null);
+  const [requestBodyMimeType, setRequestBodyMimeType] = useState<string | null>(null);
   const [responseSearch, setResponseSearch] = useState('');
   const [searchResults, setSearchResults] = useState<Set<string>>(new Set());
   const [isSearching, setIsSearching] = useState(false);
@@ -134,7 +136,26 @@ function Panel() {
       setResponseBody(null);
       setRequestCookies(null);
       setResponseCookies([]);
+      setRequestBody(null);
+      setRequestBodyMimeType(null);
       return;
+    }
+
+    // Get request body (POST data)
+    const postData = harRequest.request.postData;
+    if (postData?.text) {
+      setRequestBody(postData.text);
+      setRequestBodyMimeType(postData.mimeType || null);
+    } else if (postData?.params && postData.params.length > 0) {
+      // Form data - convert to readable format
+      const formData = postData.params
+        .map(p => `${p.name}=${p.value || ''}`)
+        .join('\n');
+      setRequestBody(formData);
+      setRequestBodyMimeType('application/x-www-form-urlencoded');
+    } else {
+      setRequestBody(null);
+      setRequestBodyMimeType(null);
     }
 
     // Get cookies from headers
@@ -163,6 +184,8 @@ function Panel() {
     setResponseBody(null);
     setRequestCookies(null);
     setResponseCookies([]);
+    setRequestBody(null);
+    setRequestBodyMimeType(null);
     fetchRequestDetails(request);
   }, [fetchRequestDetails]);
 
@@ -172,6 +195,8 @@ function Panel() {
     setResponseBody(null);
     setRequestCookies(null);
     setResponseCookies([]);
+    setRequestBody(null);
+    setRequestBodyMimeType(null);
     setResponseCache(new Map());
     setSearchResults(new Set());
     setResponseSearch('');
@@ -455,6 +480,33 @@ function Panel() {
                   responseCookies={responseCookies}
                 />
               </div>
+
+              {/* Request Body */}
+              {requestBody && (
+                <div className="mt-6 border-t pt-4">
+                  <label className="text-xs text-gray-500 font-semibold">📤 Request Body</label>
+                  {requestBodyMimeType && (
+                    <span className="ml-2 text-xs text-gray-400">({requestBodyMimeType})</span>
+                  )}
+                  <div className="mt-2 bg-blue-50 rounded p-2 max-h-64 overflow-auto border border-blue-200">
+                    {(() => {
+                      // Try to parse as JSON
+                      const jsonResult = tryParseJson(requestBody);
+                      if (jsonResult.success) {
+                        return <JsonViewer data={jsonResult.data} />;
+                      }
+                      // Show as plain text (form data or other)
+                      return (
+                        <pre className="text-xs whitespace-pre-wrap break-all">
+                          {requestBody.length > 3000 
+                            ? requestBody.substring(0, 3000) + '\n\n... (truncated)'
+                            : requestBody}
+                        </pre>
+                      );
+                    })()}
+                  </div>
+                </div>
+              )}
 
               {/* Response Body */}
               <div className="mt-6 border-t pt-4">
