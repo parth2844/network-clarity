@@ -9,7 +9,7 @@
 | Build Tool | Vite | 5.x |
 | Extension Build | @crxjs/vite-plugin | 2.x |
 | CSS Framework | Tailwind CSS | 3.x |
-| State Management | Zustand | 4.x |
+| State Management | React useState (local) | - |
 | Extension Manifest | Chrome Manifest V3 | - |
 
 ## Development Environment
@@ -18,15 +18,6 @@
 - Node.js 18+ 
 - npm 9+
 - Chrome browser (for testing)
-
-### Project Initialization
-```bash
-npm create vite@latest network-clarity -- --template react-ts
-cd network-clarity
-npm install
-npm install -D @crxjs/vite-plugin@beta tailwindcss postcss autoprefixer
-npm install zustand
-```
 
 ### Build Commands
 ```bash
@@ -37,37 +28,27 @@ npm run preview  # Preview production build
 
 ## Chrome Extension Configuration
 
-### Manifest V3 Structure
-```json
-{
-  "manifest_version": 3,
-  "name": "Network Clarity",
-  "version": "1.0.0",
-  "description": "Understand website network activity in plain English",
-  "permissions": [
-    "webRequest",
-    "activeTab",
-    "tabs"
+### Manifest V3 Structure (defined in vite.config.ts)
+```typescript
+const manifest: ManifestV3Export = {
+  manifest_version: 3,
+  name: 'Network Clarity',
+  version: '1.0.0',
+  description: 'Understand website network activity in plain English',
+  permissions: [
+    'webRequest',
+    'activeTab',
+    'tabs'
   ],
-  "host_permissions": ["<all_urls>"],
-  "background": {
-    "service_worker": "src/background/service-worker.ts",
-    "type": "module"
+  host_permissions: ['<all_urls>'],
+  background: {
+    service_worker: 'src/background/service-worker.ts',
+    type: 'module'
   },
-  "action": {
-    "default_popup": "src/popup/index.html",
-    "default_icon": {
-      "16": "icons/icon16.png",
-      "48": "icons/icon48.png",
-      "128": "icons/icon128.png"
-    }
+  action: {
+    default_popup: 'src/popup/index.html'
   },
-  "devtools_page": "src/devtools/devtools.html",
-  "icons": {
-    "16": "icons/icon16.png",
-    "48": "icons/icon48.png",
-    "128": "icons/icon128.png"
-  }
+  devtools_page: 'src/devtools/devtools.html'
 }
 ```
 
@@ -82,8 +63,7 @@ npm run preview  # Preview production build
 ```json
 {
   "react": "^18.2.0",
-  "react-dom": "^18.2.0",
-  "zustand": "^4.5.0"
+  "react-dom": "^18.2.0"
 }
 ```
 
@@ -101,6 +81,8 @@ npm run preview  # Preview production build
   "vite": "^5.1.0"
 }
 ```
+
+Note: Zustand was planned but not implemented. State is managed with React's useState locally in each component.
 
 ## Technical Constraints
 
@@ -121,25 +103,37 @@ npm run preview  # Preview production build
 ```typescript
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import { crx } from '@crxjs/vite-plugin'
-import manifest from './public/manifest.json'
+import { crx, ManifestV3Export } from '@crxjs/vite-plugin'
+
+const manifest: ManifestV3Export = {
+  // ... manifest definition inline
+}
 
 export default defineConfig({
   plugins: [
     react(),
     crx({ manifest }),
   ],
+  server: {
+    port: 5173,
+    strictPort: true,
+    hmr: {
+      port: 5173,
+    },
+  },
   build: {
+    outDir: 'dist',
+    sourcemap: true,
     rollupOptions: {
       input: {
-        popup: 'src/popup/index.html',
         panel: 'src/devtools/panel.html',
-        devtools: 'src/devtools/devtools.html',
       },
     },
   },
 })
 ```
+
+Note: The manifest is defined directly in vite.config.ts rather than public/manifest.json to enable dynamic configuration.
 
 ### TypeScript Configuration
 ```json
@@ -217,8 +211,8 @@ export default {
 
 ### Tracker Lists
 - EasyPrivacy: https://easylist.to/easylist/easyprivacy.txt
-- Domain list extracted and embedded at build time
-- ~5000 tracking domains
+- ~100 domains curated and embedded in `src/shared/tracker-list.ts`
+- Updated via extension updates
 
 ### Documentation
 - Chrome Extension API: https://developer.chrome.com/docs/extensions/reference/
