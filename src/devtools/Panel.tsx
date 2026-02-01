@@ -487,12 +487,12 @@ function Panel() {
 
               {/* Request Body */}
               {requestBody && (
-                <div className="mt-6 border-t pt-4">
-                  <label className="text-xs text-gray-500 font-semibold">📤 Request Body</label>
-                  {requestBodyMimeType && (
-                    <span className="ml-2 text-xs text-gray-400">({requestBodyMimeType})</span>
-                  )}
-                  <div className="mt-2 bg-blue-50 rounded p-2 max-h-64 overflow-auto border border-blue-200">
+                <CollapsibleSection 
+                  title={`📤 Request Body${requestBodyMimeType ? ` (${requestBodyMimeType})` : ''}`}
+                  defaultExpanded={true}
+                  className="mt-6"
+                >
+                  <div className="bg-blue-50 rounded p-2 max-h-64 overflow-auto border border-blue-200">
                     {(() => {
                       // Try to parse as JSON
                       const jsonResult = tryParseJson(requestBody);
@@ -509,16 +509,19 @@ function Panel() {
                       );
                     })()}
                   </div>
-                </div>
+                </CollapsibleSection>
               )}
 
               {/* Response Body */}
-              <div className="mt-6 border-t pt-4">
-                <label className="text-xs text-gray-500 font-semibold">Response Body</label>
+              <CollapsibleSection 
+                title="📥 Response Body"
+                defaultExpanded={true}
+                className="mt-6"
+              >
                 {loadingBody ? (
-                  <div className="text-sm text-gray-400 mt-2">Loading...</div>
+                  <div className="text-sm text-gray-400">Loading...</div>
                 ) : responseBody ? (
-                  <div className="mt-2 bg-gray-50 rounded p-2 max-h-96 overflow-auto">
+                  <div className="bg-gray-50 rounded p-2 max-h-96 overflow-auto">
                     {(() => {
                       // Try to parse as JSON
                       const jsonResult = tryParseJson(responseBody);
@@ -536,11 +539,11 @@ function Panel() {
                     })()}
                   </div>
                 ) : (
-                  <div className="text-sm text-gray-400 mt-2">
+                  <div className="text-sm text-gray-400">
                     No response body available
                   </div>
                 )}
-              </div>
+              </CollapsibleSection>
             </div>
           ) : (
             <div className="flex items-center justify-center h-full text-gray-500">
