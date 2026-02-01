@@ -4,6 +4,7 @@ import { truncateUrl, formatDuration, formatBytes } from '../shared/utils';
 import { getStatusExplanation, getTypeExplanation } from '../shared/explanations';
 import JsonViewer, { tryParseJson } from '../components/JsonViewer';
 import CookieInspector from '../components/CookieInspector';
+import CollapsibleSection from '../components/CollapsibleSection';
 
 // Store HAR request objects to fetch content later
 const harRequestMap = new Map<string, chrome.devtools.network.Request>();
@@ -473,13 +474,16 @@ function Panel() {
               )}
 
               {/* Cookies */}
-              <div className="mt-6 border-t pt-4">
-                <label className="text-xs text-gray-500 font-semibold mb-2 block">🍪 Cookies</label>
+              <CollapsibleSection 
+                title="🍪 Cookies" 
+                defaultExpanded={true}
+                className="mt-6"
+              >
                 <CookieInspector 
                   requestCookies={requestCookies}
                   responseCookies={responseCookies}
                 />
-              </div>
+              </CollapsibleSection>
 
               {/* Request Body */}
               {requestBody && (
