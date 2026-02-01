@@ -27,12 +27,10 @@
 
 ### In Progress
 - [ ] Testing extension in Chrome
-- [ ] UI polish and accessibility
+- [ ] Chrome Web Store assets
 
 ### Not Started
 - [ ] Cross-browser testing
-- [ ] User documentation
-- [ ] Chrome Web Store assets
 
 ## What Works
 
@@ -61,6 +59,17 @@
   - Search across all response bodies
   - Debounced for performance
   - Caching to avoid re-fetching
+- Request Body Viewer:
+  - JSON formatting for POST payloads
+  - Form data display
+  - MIME type indicator
+- Collapsible Sections:
+  - Cookies, Request Body, Response Body all collapsible
+  - Click header to expand/collapse
+- Accessibility:
+  - ARIA labels on all controls
+  - Keyboard navigation for request list
+  - Loading state indicators
 
 ### Service Worker
 - Intercepts all requests via webRequest API
@@ -71,9 +80,9 @@
 ## What's Left to Build
 
 ### Phase 4: Polish & Documentation
-- UI polish and accessibility improvements
+- ✅ UI polish and accessibility improvements
 - Cross-browser testing (Chrome primary)
-- User documentation
+- ✅ User documentation (README updated)
 - Chrome Web Store assets (screenshots, description)
 
 ### Phase 5: Future Improvements (Out of Scope for v1)
