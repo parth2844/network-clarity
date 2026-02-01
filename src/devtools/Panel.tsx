@@ -266,8 +266,9 @@ function Panel() {
         <button
           onClick={clearRequests}
           className="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-100"
+          aria-label="Clear all captured requests"
         >
-          Clear
+          🗑️ Clear
         </button>
         
         <input
@@ -276,6 +277,7 @@ function Panel() {
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
           className="flex-1 px-3 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+          aria-label="Filter requests by URL"
         />
         
         <div className="relative">
@@ -305,6 +307,7 @@ function Panel() {
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value)}
           className="px-3 py-1 text-sm border border-gray-300 rounded bg-white"
+          aria-label="Filter by request type"
         >
           <option value="all">All Types</option>
           <option value="xmlhttprequest">API Calls</option>
@@ -324,7 +327,7 @@ function Panel() {
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
         {/* Request List */}
-        <div className="w-1/2 border-r border-gray-200 overflow-auto">
+        <div className="w-1/2 border-r border-gray-200 overflow-auto" role="list" aria-label="Network requests">
           {/* Header */}
           <div className="grid grid-cols-12 gap-2 px-3 py-2 text-xs font-semibold text-gray-500 bg-gray-100 border-b border-gray-200 sticky top-0">
             <div className="col-span-5">URL</div>
@@ -339,6 +342,16 @@ function Panel() {
             <div
               key={request.id}
               onClick={() => handleSelectRequest(request)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  handleSelectRequest(request);
+                }
+              }}
+              role="listitem"
+              tabIndex={0}
+              aria-selected={selectedRequest?.id === request.id}
+              aria-label={`${request.method} ${request.domain}, status ${request.status}, ${request.isTracker ? 'tracker' : request.isThirdParty ? 'third party' : 'first party'}`}
               className={`grid grid-cols-12 gap-2 px-3 py-2 text-xs request-row ${
                 selectedRequest?.id === request.id ? 'selected' : ''
               } ${searchResults.has(request.id) ? 'search-match' : ''} ${request.isTracker ? 'tracker' : request.isThirdParty ? 'third-party' : ''}`}
@@ -519,7 +532,10 @@ function Panel() {
                 className="mt-6"
               >
                 {loadingBody ? (
-                  <div className="text-sm text-gray-400">Loading...</div>
+                  <div className="flex items-center gap-2 text-sm text-gray-400" aria-live="polite">
+                    <span className="animate-spin">⏳</span>
+                    <span>Loading response body...</span>
+                  </div>
                 ) : responseBody ? (
                   <div className="bg-gray-50 rounded p-2 max-h-96 overflow-auto">
                     {(() => {
