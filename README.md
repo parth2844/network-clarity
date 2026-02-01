@@ -6,12 +6,6 @@ A Chrome extension that helps you understand website network activity in plain E
 
 ## ✨ Features
 
-### 🎯 Element Picker
-Click on any element on a webpage and instantly find which network request loaded it.
-- Hover to see resource URLs
-- Click to highlight the corresponding request
-- Works with images, scripts, stylesheets, iframes, and background images
-
 ### 🔍 Search Responses
 Find which API request returned specific data you see on the page.
 - Type any text (e.g., a username, product name, or ID)
@@ -24,6 +18,7 @@ Understand what cookies websites are using and why.
 - **Risk categories**: Low, Medium, High
 - **Cookie types**: Essential, Functional, Analytics, Advertising, Tracking
 - **Security flags**: HttpOnly, Secure, SameSite displayed
+- **Collapsible section** for cleaner view
 
 ### 📊 Request Analysis
 Every network request explained in simple terms:
@@ -32,11 +27,22 @@ Every network request explained in simple terms:
 - **Third-party detection**: Know which requests go to external services
 - **Tracker identification**: Spot known tracking scripts
 
-### 📝 JSON Response Viewer
+### 📤 Request Body Viewer
+See what data is being sent to servers:
+- JSON payloads formatted with syntax highlighting
+- Form data displayed in readable format
+- MIME type indicator
+
+### 📥 JSON Response Viewer
 Pretty-printed JSON responses with:
 - Syntax highlighting
 - Collapsible objects and arrays
 - Color-coded values (strings, numbers, booleans)
+
+### ♿ Accessible Design
+- Keyboard navigation for request list (Tab, Enter, Space)
+- ARIA labels for screen readers
+- Clear visual indicators for loading states
 
 ## 📦 Installation
 
@@ -70,21 +76,45 @@ See [DISTRIBUTION.md](DISTRIBUTION.md) for instructions on installing from a dow
 
 ## 🚀 Usage
 
+### Quick Start
 1. Open any website
 2. Open Chrome DevTools (F12 or right-click → Inspect)
 3. Click the **"Network Clarity"** tab
 4. Browse the page - network requests appear automatically
 
-### Element Picker
-1. Click the **🎯 Pick Element** button
-2. Hover over any page element - resources will highlight
-3. Click to select and view the request details
-4. Press **Escape** to cancel
+### Understanding the Interface
 
-### Understanding Requests
+#### Toolbar
+- **🗑️ Clear**: Clear all captured requests
+- **Filter by URL**: Type to filter requests by URL or domain
+- **🔍 Search responses**: Find text in response bodies
+- **Type dropdown**: Filter by request type (API, Scripts, Images, etc.)
+
+#### Request List (Left Panel)
 - **Green rows**: First-party requests (from the same website)
 - **Yellow rows**: Third-party requests (external services)
 - **Red rows**: Known trackers
+- **Purple highlight**: Matches response search
+
+#### Request Details (Right Panel)
+Click any request to see:
+- **URL**: Full request URL
+- **Method**: GET, POST, PUT, etc.
+- **Status**: HTTP status with plain-English explanation
+- **Type**: Request type with icon and description
+- **Domain**: Server hostname
+- **Classification**: First-party, Third-party, or Tracker badge
+- **Timing**: How long the request took
+- **Size**: Response size in KB/MB
+- **🍪 Cookies**: Sent cookies and Set-Cookie headers with analysis
+- **📤 Request Body**: POST/PUT payload (if any)
+- **📥 Response Body**: JSON viewer or plain text
+
+### Pro Tips
+- Use **API Calls** filter to focus on data requests
+- Search for a username to find the login/profile API
+- Check cookies section to understand tracking on a site
+- Collapse sections you don't need for a cleaner view
 
 ## 🛠️ Development
 
@@ -107,19 +137,23 @@ npm run build
 ```
 src/
 ├── background/          # Service worker
+│   └── service-worker.ts
 ├── components/          # React components
-│   ├── JsonViewer.tsx   # JSON pretty-printer
-│   └── CookieInspector.tsx  # Cookie analyzer
-├── content/             # Content scripts
-│   └── element-picker.ts    # Page element selection
+│   ├── CollapsibleSection.tsx  # Reusable collapsible wrapper
+│   ├── CookieInspector.tsx     # Cookie analyzer
+│   └── JsonViewer.tsx          # JSON pretty-printer
 ├── devtools/            # DevTools panel
 │   ├── Panel.tsx        # Main panel component
-│   └── devtools.ts      # DevTools initialization
+│   ├── devtools.ts      # DevTools initialization
+│   └── panel.html       # Panel entry point
 ├── popup/               # Browser action popup
+│   └── Popup.tsx        # Quick stats dashboard
 └── shared/              # Shared utilities
-    ├── explanations.ts      # Status & type explanations
     ├── cookie-explanations.ts  # Cookie database
-    └── utils.ts             # Helper functions
+    ├── explanations.ts         # Status & type explanations
+    ├── tracker-list.ts         # Known tracker domains
+    ├── types.ts                # TypeScript interfaces
+    └── utils.ts                # Helper functions
 ```
 
 ## 🔒 Privacy
