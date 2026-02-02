@@ -6,6 +6,21 @@ A Chrome extension that helps you understand website network activity in plain E
 
 ## ✨ Features
 
+### 🛡️ Privacy Score (A-F Grade)
+Get an instant privacy assessment for any website.
+- **One-glance grade**: A (excellent) to F (very poor)
+- **Scoring factors**: Trackers, third-party ratio, domain count
+- **Issues list**: Explains exactly why the score is low
+- **Data flow summary**: "This page sends data to 15 different servers"
+
+### 🔐 PII Detection
+Automatically detect when your personal data appears in network traffic.
+- **Detected types**: Email, phone, credit card, SSN, IP address, names, addresses
+- **Masked display**: Shows `jo***@example.com` for security
+- **Location tracking**: Shows if PII was sent (📤), received (📥), or in URL (🔗)
+- **Risk levels**: None, Low, Medium, High
+- **Luhn validation**: Credit card detection uses actual validation
+
 ### 🔍 Search Responses
 Find which API request returned specific data you see on the page.
 - Type any text (e.g., a username, product name, or ID)
@@ -163,6 +178,23 @@ Network Clarity operates **100% client-side**:
 - ✅ No servers or APIs
 - ✅ No analytics or tracking
 - ✅ Data cleared when you close DevTools
+
+## 🆚 How This Differs From Chrome's Network Tab
+
+| Feature | Chrome Network Tab | Network Clarity |
+|---------|-------------------|-----------------|
+| Privacy Score (A-F) | ❌ | ✅ |
+| PII Detection | ❌ | ✅ |
+| Cookie Risk Analysis | ❌ | ✅ |
+| Tracker Detection | ❌ | ✅ |
+| Plain-English Explanations | ❌ | ✅ |
+| First/Third-Party Badges | ❌ | ✅ |
+| Data Flow Summary | ❌ | ✅ |
+| Request Blocking | ✅ | ❌ |
+| HAR Export | ✅ | ❌ |
+| Timing Waterfall | ✅ | ⚠️ Basic |
+
+**Target audience**: Privacy-conscious users, junior developers, non-technical users who want to understand what websites are doing with their data.
 
 ## 📋 Requirements
 
