@@ -5,6 +5,7 @@ import { getStatusExplanation, getTypeExplanation } from '../shared/explanations
 import JsonViewer, { tryParseJson } from '../components/JsonViewer';
 import CookieInspector from '../components/CookieInspector';
 import CollapsibleSection from '../components/CollapsibleSection';
+import { analyzePII, getPIITypeName, getRiskColor, PIIDetectionResult } from '../shared/pii-detector';
 
 // Store HAR request objects to fetch content later
 const harRequestMap = new Map<string, chrome.devtools.network.Request>();
@@ -442,7 +443,7 @@ function Panel() {
               </div>
 
               {/* Classification */}
-              <div className="flex gap-2 mb-4">
+              <div className="flex gap-2 mb-4 flex-wrap">
                 {selectedRequest.isTracker && (
                   <span className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded">
                     Known Tracker
@@ -458,7 +459,59 @@ function Panel() {
                     First Party
                   </span>
                 )}
+                
+                {/* PII Detection Badge */}
+                {(() => {
+                  const piiResult: PIIDetectionResult = analyzePII(requestBody, responseBody, selectedRequest.url);
+                  if (piiResult.hasPII) {
+                    return (
+                      <span className={`px-2 py-1 text-xs rounded ${getRiskColor(piiResult.riskLevel)}`}>
+                        🔐 PII Detected ({piiResult.matches.length})
+                      </span>
+                    );
+                  }
+                  return null;
+                })()}
               </div>
+              
+              {/* PII Detection Section */}
+              {(() => {
+                const piiResult: PIIDetectionResult = analyzePII(requestBody, responseBody, selectedRequest.url);
+                if (piiResult.hasPII) {
+                  return (
+                    <CollapsibleSection
+                      title={`🔐 Personal Data Detected (${piiResult.matches.length})`}
+                      defaultExpanded={true}
+                      className="mb-4"
+                    >
+                      <div className={`rounded p-3 ${getRiskColor(piiResult.riskLevel)}`}>
+                        <div className="text-xs font-medium mb-2">
+                          Risk Level: <span className="font-bold uppercase">{piiResult.riskLevel}</span>
+                        </div>
+                        <div className="space-y-2">
+                          {piiResult.matches.map((match, index) => (
+                            <div key={index} className="bg-white bg-opacity-50 rounded p-2">
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs font-semibold">{getPIITypeName(match.type)}</span>
+                                <span className="text-xs px-1 py-0.5 bg-gray-200 rounded">
+                                  {match.location === 'request' ? '📤 Sent' : match.location === 'response' ? '📥 Received' : '🔗 URL'}
+                                </span>
+                              </div>
+                              <div className="text-xs mt-1 font-mono">{match.value}</div>
+                              {match.context && (
+                                <div className="text-xs mt-1 text-gray-600">
+                                  Field: <span className="font-mono">{match.context}</span>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </CollapsibleSection>
+                  );
+                }
+                return null;
+              })()}
 
               {/* Timing */}
               <div className="mb-4">
