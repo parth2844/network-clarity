@@ -27,16 +27,41 @@ function Panel() {
   const [responseCache, setResponseCache] = useState<Map<string, string>>(new Map());
 
   useEffect(() => {
+    // Helper to check if URL should be filtered out
+    const shouldSkipUrl = (url: string): boolean => {
+      return url.startsWith('chrome-extension://') ||
+             url.startsWith('chrome://') ||
+             url.startsWith('data:') ||
+             url.startsWith('blob:') ||
+             url.startsWith('about:');
+    };
+
+    // Helper to safely parse URL and get hostname
+    const getHostname = (url: string): string => {
+      try {
+        return new URL(url).hostname;
+      } catch {
+        return 'unknown';
+      }
+    };
+
     // Listen for network requests via DevTools API
     const handleRequest = (harRequest: chrome.devtools.network.Request) => {
+      const url = harRequest.request.url;
+      
+      // Skip internal/special URLs
+      if (shouldSkipUrl(url)) {
+        return;
+      }
+
       const request: NetworkRequest = {
         id: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-        url: harRequest.request.url,
+        url: url,
         method: harRequest.request.method,
         type: (harRequest._resourceType as NetworkRequest['type']) || 'other',
         status: harRequest.response.status,
         statusText: harRequest.response.statusText,
-        domain: new URL(harRequest.request.url).hostname,
+        domain: getHostname(url),
         isThirdParty: false, // Will be calculated
         isTracker: false, // Will be calculated
         timing: {
@@ -93,23 +118,25 @@ function Panel() {
 
     // Get existing requests
     chrome.devtools.network.getHAR((harLog) => {
-      const existingRequests: NetworkRequest[] = harLog.entries.map((entry, index) => ({
-        id: `existing-${index}`,
-        url: entry.request.url,
-        method: entry.request.method,
-        type: ((entry as unknown as { _resourceType?: string })._resourceType as NetworkRequest['type']) || 'other',
-        status: entry.response.status,
-        statusText: entry.response.statusText,
-        domain: new URL(entry.request.url).hostname,
-        isThirdParty: false,
-        isTracker: false,
-        timing: {
-          startTime: new Date(entry.startedDateTime).getTime(),
-          duration: entry.time,
-        },
-        size: entry.response.content.size,
-        mimeType: entry.response.content.mimeType,
-      }));
+      const existingRequests: NetworkRequest[] = harLog.entries
+        .filter(entry => !shouldSkipUrl(entry.request.url))
+        .map((entry, index) => ({
+          id: `existing-${index}`,
+          url: entry.request.url,
+          method: entry.request.method,
+          type: ((entry as unknown as { _resourceType?: string })._resourceType as NetworkRequest['type']) || 'other',
+          status: entry.response.status,
+          statusText: entry.response.statusText,
+          domain: getHostname(entry.request.url),
+          isThirdParty: false,
+          isTracker: false,
+          timing: {
+            startTime: new Date(entry.startedDateTime).getTime(),
+            duration: entry.time,
+          },
+          size: entry.response.content.size,
+          mimeType: entry.response.content.mimeType,
+        }));
       
       setRequests(existingRequests);
     });
