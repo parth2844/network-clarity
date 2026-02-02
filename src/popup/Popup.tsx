@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { TabData, GetTabDataResponse } from '../shared/types';
+import { calculatePrivacyScore, getGradeColor, getGradeEmoji, PrivacyScoreResult } from '../shared/privacy-score';
 
 function Popup() {
   const [tabData, setTabData] = useState<TabData | null>(null);
@@ -72,6 +73,9 @@ function Popup() {
   }
 
   const { stats, pageDomain } = tabData;
+  
+  // Calculate privacy score
+  const privacyScore: PrivacyScoreResult = calculatePrivacyScore(stats);
 
   return (
     <div className="p-4">
@@ -83,13 +87,34 @@ function Popup() {
         </p>
       </div>
 
-      {/* Summary Card */}
-      <div className="bg-gray-50 rounded-lg p-4 mb-4">
-        <div className="text-center">
-          <div className="text-3xl font-bold text-gray-800">{stats.totalRequests}</div>
-          <div className="text-sm text-gray-500">Total Requests</div>
+      {/* Privacy Score Card */}
+      <div className={`rounded-lg p-4 mb-4 ${getGradeColor(privacyScore.grade)}`}>
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-sm font-medium opacity-80">Privacy Score</div>
+            <div className="text-xs mt-1 opacity-70">{privacyScore.summary}</div>
+          </div>
+          <div className="text-right">
+            <div className="text-4xl font-bold">
+              {getGradeEmoji(privacyScore.grade)} {privacyScore.grade}
+            </div>
+            <div className="text-xs opacity-70">{privacyScore.score}/100</div>
+          </div>
         </div>
       </div>
+
+      {/* Privacy Details */}
+      {privacyScore.details.length > 0 && (
+        <div className="bg-gray-50 rounded-lg p-3 mb-4">
+          <div className="text-xs font-semibold text-gray-600 mb-2">Issues Found</div>
+          {privacyScore.details.map((detail, index) => (
+            <div key={index} className="text-xs text-gray-600 py-1 flex items-start">
+              <span className="mr-2">•</span>
+              <span>{detail}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-3 gap-3 mb-4">
@@ -127,20 +152,16 @@ function Popup() {
         </div>
       )}
 
-      {/* Summary Text */}
-      <div className="text-sm text-gray-600 bg-gray-50 rounded-lg p-3">
-        {stats.trackerCount > 0 ? (
-          <p>
-            This page contacted <strong>{stats.uniqueDomains.length}</strong> different domains,{' '}
-            <strong className="text-tracker">{stats.trackerDomains.length}</strong> of which are
-            known trackers.
-          </p>
-        ) : (
-          <p>
-            This page contacted <strong>{stats.uniqueDomains.length}</strong> different domains.
-            No known trackers detected.
-          </p>
-        )}
+      {/* Data Flow Summary */}
+      <div className="bg-gray-50 rounded-lg p-3 mb-4">
+        <div className="text-xs font-semibold text-gray-600 mb-2">Data Flow</div>
+        <div className="text-sm text-gray-700">
+          This page sends data to <strong>{stats.uniqueDomains.length}</strong> different servers
+          {stats.trackerCount > 0 && (
+            <>, including <strong className="text-tracker">{stats.trackerDomains.length}</strong> known trackers</>
+          )}
+          .
+        </div>
       </div>
 
       {/* Footer */}
