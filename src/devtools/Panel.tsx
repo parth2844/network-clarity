@@ -460,13 +460,13 @@ function Panel() {
                   </span>
                 )}
                 
-                {/* PII Detection Badge */}
+                {/* PII Detection Badge - only check outbound data (request body + URL, not response) */}
                 {(() => {
-                  const piiResult: PIIDetectionResult = analyzePII(requestBody, responseBody, selectedRequest.url);
+                  const piiResult: PIIDetectionResult = analyzePII(requestBody, null, selectedRequest.url);
                   if (piiResult.hasPII) {
                     return (
                       <span className={`px-2 py-1 text-xs rounded ${getRiskColor(piiResult.riskLevel)}`}>
-                        🔐 PII Detected ({piiResult.matches.length})
+                        🔐 PII Sent ({piiResult.matches.length})
                       </span>
                     );
                   }
@@ -474,14 +474,14 @@ function Panel() {
                 })()}
               </div>
               
-              {/* PII Detection Section */}
+              {/* PII Detection Section - only check outbound data */}
               {(() => {
-                const piiResult: PIIDetectionResult = analyzePII(requestBody, responseBody, selectedRequest.url);
+                const piiResult: PIIDetectionResult = analyzePII(requestBody, null, selectedRequest.url);
                 if (piiResult.hasPII) {
                   return (
                     <CollapsibleSection
-                      title={`🔐 Personal Data Detected (${piiResult.matches.length})`}
-                      defaultExpanded={true}
+                      title={`🔐 Personal Data Sent (${piiResult.matches.length})`}
+                      defaultExpanded={false}
                       className="mb-4"
                     >
                       <div className={`rounded p-3 ${getRiskColor(piiResult.riskLevel)}`}>
@@ -542,7 +542,7 @@ function Panel() {
               {/* Cookies */}
               <CollapsibleSection 
                 title="🍪 Cookies" 
-                defaultExpanded={true}
+                defaultExpanded={false}
                 className="mt-6"
               >
                 <CookieInspector 
