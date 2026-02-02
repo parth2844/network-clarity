@@ -29,6 +29,11 @@
 - [ ] Testing extension in Chrome
 - [ ] Chrome Web Store assets
 
+### Completed (New Differentiating Features)
+- [x] Privacy Score (A-F grade) in popup
+- [x] PII Detection in DevTools Panel
+- [x] Comparison table in README
+
 ### Not Started
 - [ ] Cross-browser testing
 
@@ -81,6 +86,9 @@
 
 ### Phase 4: Polish & Documentation
 - ✅ UI polish and accessibility improvements
+- ✅ Privacy Score feature (A-F grade)
+- ✅ PII Detection feature
+- ✅ Data Flow Summary
 - Cross-browser testing (Chrome primary)
 - ✅ User documentation (README updated)
 - Chrome Web Store assets (screenshots, description)
